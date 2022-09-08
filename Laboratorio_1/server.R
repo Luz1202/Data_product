@@ -6,13 +6,18 @@ library(dplyr)
 shinyServer(function(input, output) {
   
   output$mtcars_tbl <- renderTable({
-    global <- as.data.frame(x=double(),
+    global <- as.data.frame(idA=double(),x=double(),
                             y=double())
-    if(nrow(global)!=0){
-      global
-    } else {
-      NULL
-    }
+    nclk <- as.data.frame(idB = as.double(paste(input$clk$x,input$clk$y, sep="")),
+                          x=input$clk$x,
+                          y=input$clk$y)
+    global <- global %>% 
+      left_join(global %>% 
+                  crossing(nclk) %>% 
+                  group_by(id) %>%
+                  filter(abs(idA-idB) == min(abs(idA-idB))),
+                by = "idA")
+    
   })
   
   
