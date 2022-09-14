@@ -2,83 +2,121 @@
 library(shiny)
 library(ggplot2)
 library(dplyr)
+library(DT)
 
 shinyServer(function(input, output) {
   
-  output$mtcars_tbl <- renderTable({
-    global <- as.data.frame(idA=double(),x=double(),
-                            y=double())
-    nclk <- as.data.frame(idB = as.double(paste(input$clk$x,input$clk$y, sep="")),
-                          x=input$clk$x,
-                          y=input$clk$y)
-    global <- global %>% 
-      left_join(global %>% 
-                  crossing(nclk) %>% 
-                  group_by(id) %>%
-                  filter(abs(idA-idB) == min(abs(idA-idB))),
-                by = "idA")
+  #Creamos una variable global
+  global <<- data.frame(NULL)
+  nhover <<- data.frame(NULL)
+  nbrush <<- data.frame(NULL)
+  
+  
+#FUNCIÓN 1, PARA CAPTURA DE CLICKS
+  nuevos_clks <- reactive({
+
+    if(!is.null(input$clk$x)){
+      nclk <- nearPoints(mtcars,input$clk,xvar = 'wt',yvar='mpg', maxpoints = 1)
+      nclk[,c("n","id")] <- c(NULL,paste(as.integer(input$clk$x),
+                                  as.integer(input$clk$y),
+                                  sep = "-"))
+      
+      global <<- rbind(global,nclk)
+      global$n <<- c(1:length(global$id))
+      } 
     
+    if(!is.null(input$dclk$x)){
+      ndbclk <- nearPoints(mtcars,input$dclk,xvar = 'wt',yvar='mpg',maxpoints = 1,threshold = 15)
+      ndbclk[,c("n","id")] <- c(NULL,paste(as.integer(input$dclk$x),
+                                         as.integer(input$dclk$y),
+                                         sep = "-"))
+    opt <- global %>%
+      dplyr::filter(id == ndbclk$id[1])
+
+    if(!is.null(opt)){
+      if(ndbclk$id[1] != "NA"){
+      global <<- global[-opt$n[1],]
+      global$n <<- c(1:length(global$id))}
+    }
+    }
+})
+  
+  
+##FUNCIÓN 2: PARA HOVER
+  hover_n <- reactive({ 
+    if(!is.null(input$mhover$x)){
+      nhover <<- nearPoints(mtcars,input$mhover,xvar = 'wt',yvar='mpg',threshold = 15,maxpoints = 1)
+    }
   })
-  
-  
-  output$click_data <- renderPrint({
-    global <- NULL
-    newclk <- NULL
-    clk_msg <- NULL
-    dclk_msg<- NULL
-    mhover_msg <- NULL
-    mbrush_msg <- NULL
-    if(!is.null(input$clk$x) ){
-      clk_msg<-
-        paste0("click cordenada x= ", round(input$clk$x,2), 
-               " click coordenada y= ", round(input$clk$y,2))
-      newclk <- as.data.frame(x=round(input$clk$x,2),y=round(input$clk$y,2))
-      global <- rbind(global,newclk)
-    }
     
-    
-    if(!is.null(input$dclk$x) ){
-      dclk_msg<-paste0("doble click cordenada x= ", round(input$dclk$x,2), 
-                       " doble click coordenada y= ", round(input$dclk$y,2))
-    }
-    if(!is.null(input$mhover$x) ){
-      mhover_msg<-paste0("hover cordenada x= ", round(input$mhover$x,2), 
-                         " hover coordenada y= ", round(input$mhover$y,2))
-    }
-    
-    
+  brush_n <- reactive({ 
     if(!is.null(input$mbrush$xmin)){
-      brushx <- paste0(c('(',round(input$mbrush$xmin,2),',',round(input$mbrush$xmax,2),')'),collapse = '')
-      brushy <- paste0(c('(',round(input$mbrush$ymin,2),',',round(input$mbrush$ymax,2),')'),collapse = '')
-      mbrush_msg <- cat('\t rango en x: ', brushx,'\n','\t rango en y: ', brushy)
-    }
-    
-    
-    
-    
-    cat(clk_msg,dclk_msg,mhover_msg,mbrush_msg,sep = '\n')
-    
+      nbrush <<- brushedPoints(mtcars,input$mbrush,xvar='wt',yvar='mpg')}
+    })
+  
+  output$click_data_test <- renderPrint({
+    print(brush_n())
   })
   
   
   
-  output$mtcars_tbl <- renderTable({
-    ## df <- nearPoints(mtcars,input$clk,xvar='wt',yvar='mpg')
-    df <- brushedPoints(mtcars,input$mbrush,xvar='wt',yvar='mpg')
-    if(nrow(df)!=0){
-      df
+  # Creamos una función para el gráfico
+  colorear <- reactive({
+    plot(mtcars$wt,mtcars$mpg, xlab = "wt", ylab="millas por galon")
+    
+    if(!is.null(global)){
+      nuevos_clks()
+      points(global$wt,global$mpg,col="green", pch = 19)
+    }
+    
+    if(!is.null(nhover)){
+      hover_n()
+      points(nhover$wt,nhover$mpg,col="gray", pch = 19)
+    }
+    
+    if(!is.null(nbrush)){
+      brush_n()
+      points(nbrush$wt,nbrush$mpg,col="blue", pch = 19)
+    }
+    
+  })
+  
+  
+  #Llamamos la función del gráfico
+  output$plot_click_options <- renderPlot({
+    colorear()
+  })
+  
+  
+  
+  output$tabla_1 <- DT::renderDataTable({
+    mtcars %>% DT::datatable(filter = 'top',
+                            options = list(
+                              pageLength = 5,
+                              scrollX=TRUE))
+  })
+
+  output$tabla_2 <- DT::renderDataTable({
+    nuevos_clks()
+    if(nrow(global)!=0){
+      global %>% DT::datatable(filter = 'top',
+                               options = list(
+                                 pageLength = 5,
+                                 scrollX=TRUE))
     } else {
       NULL
     }
-    
   })
   
-  
-  
-  output$plot_click_options <- renderPlot({
-    
-    plot(mtcars$wt,mtcars$mpg, xlab = "wt", ylab="millas por galon")
+  output$tabla_3 <- DT::renderDataTable({
+    brush_n()
+    if(nrow(nbrush)!=0){
+      nbrush %>% DT::datatable(filter = 'top',
+                               options = list(
+                                 pageLength = 5,
+                                 scrollX=TRUE))
+    } else {
+      NULL
+    }
   })
-  
-  
 })
