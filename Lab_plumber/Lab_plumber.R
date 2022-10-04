@@ -1,6 +1,7 @@
 library(plumber)
 library(lubridate)
 library(dplyr)
+library(jsonlite)
 
 #* @apiTitle Laboratorio Plumber
 #* @apiDescription En este API se practican características útiles
@@ -10,7 +11,46 @@ library(dplyr)
 
 #### Parte 1: Forward to another handler ####
 
-#* Modelo del Titanic visto en clase
+#* Aplicamos el filtro
+#* @filter logger
+
+function(req=NULL){
+  
+if(length(req$args)!=0){
+  folder <- paste0(getwd(),req$PATH_INFO,"/","year=",year(Sys.Date()),
+                 "/","month=",month(Sys.Date()),"/","day=",day(Sys.Date()),
+                 "/","hour=",hour(Sys.time()))
+    
+    if (file.exists(folder)) {
+      
+      x <- list('req'=req$args,
+                'query'=req$QUERY_STRING,
+                'user'=req$HTTP_USER_AGENT)
+      x<- toJSON(x,auto_unbox = TRUE)
+      
+      write(x,file = paste0(folder,req$PATH_INFO,"-",as.integer(Sys.time()),".json"))
+      
+    } else {
+      browser()
+      dir.create(folder,recursive = TRUE)
+      
+      x <- list('req'=req$args,
+                'query'=req$QUERY_STRING,
+                'user'=req$HTTP_USER_AGENT)
+      
+      x<- toJSON(x,auto_unbox = TRUE)
+      
+      write(x,file = paste0(folder,req$PATH_INFO,"-",as.integer(Sys.time()),".json"))
+      
+    }}
+  plumber::forward()
+  
+}
+
+# Archivo de la predicción
+fit <- readRDS("modelo_final.rds")
+
+#* Se hace la predicción de supervivencia
 #* @param Pclass clase en el que viajabe el pasajero
 #* @param Sex Sexo del pasajero
 #* @param Age edad del pasajero
@@ -18,31 +58,6 @@ library(dplyr)
 #* @param Parch numero de parientes
 #* @param Fare precio del boleto
 #* @param Embarked puerto del que embarco
-#* @filter logger
-function(Pclass=NULL, Sex=NULL, Age=NULL, SibSp=NULL, 
-         Parch=NULL, Fare=NULL, Embarked=NULL){
-  
-  if(!is.null(Pclass)&!is.null(Sex)&!is.null(Age)&!is.null(SibSp)&
-     !is.null(Parch)&!is.null(Fare)&!is.null(Embarked)){
-    folder <- as.character(Sys.Date())
-#    a <- cat(as.character(Sys.time()), "-",
-#             req$REQUEST_METHOD, req$PATH_INFO, "-",
-#            req$HTTP_USER_AGENT, "@", req$REMOTE_ADDR, "\n")
-    
-    if (file.exists(folder)) {  
-      cat("The folder already exists")
-    } else {
-      dir.create(folder)
-      }
-  }
-  plumber::forward()
-}
-
-
-# Archivo de la predicción
-fit <- readRDS("modelo_final.rds")
-
-#* Se hace la predicción de supervivencia
 #* @post /titanic
 
 function(Pclass, Sex, Age, SibSp, Parch, Fare, Embarked){
