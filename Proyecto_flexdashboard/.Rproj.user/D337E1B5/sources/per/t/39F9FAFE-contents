@@ -1,5 +1,5 @@
 ---
-title: "Análisis de ventas"
+title: "Desempeño en ventas"
 output: 
   flexdashboard::flex_dashboard:
     orientation: columns
@@ -8,29 +8,112 @@ output:
 
 ```{r setup, include=FALSE}
 library(flexdashboard)
+library(readr)
+library(dplyr)
+library(DT)
+library(formattable)
+library(plotly)
+library(leaflet)
+library(crosstalk)
 ```
 
-Column {data-width=650}
+```{r message=FALSE, warning=FALSE, include=FALSE}
+mi_tienda <- read.csv('tienda.csv',stringsAsFactors = FALSE) %>%
+  rename_with( ~ tolower(gsub(".","_",.x,fixed = TRUE)))
+
+mi_tienda$sales <- sub(",","",mi_tienda$sales)
+mi_tienda$profit <- sub(",","",mi_tienda$profit)
+
+mi_tienda[,c("order_date","ship_date","sales","profit","year",'cost')] <- as.data.frame(list(order_date = as.Date(mi_tienda$order_date,'%m/%d/%Y'),
+       ship_date = as.Date(mi_tienda$ship_date,'%m/%d/%Y'),
+       sales = as.numeric(mi_tienda$sales),
+       profit = as.numeric(mi_tienda$profit),
+       year = format(as.Date(mi_tienda$order_date,'%m/%d/%Y'),'%Y')
+       )) %>%
+  mutate(cost = sales-profit)
+
+
+```
+
+# Productos
+
+
+Column {data-width=600}
 -----------------------------------------------------------------------
 
-### Chart A
+### Rendimiento de los productos
 
-```{r}
+```{r echo=FALSE}
+## DataShared para definir los productos más rentables
+data_top <- SharedData$new(mi_tienda %>%
+                             group_by(year, sub_category,product_name) %>%
+                             filter(!is.na(profit) & 
+                                      !is.na(sales)&
+                                      !is.na(cost))%>%
+                             dplyr::summarise(profit = sum(profit)/sum(cost),
+                                              ventas = sum(sales),
+                                              costos = sum(cost),
+                                              segmentos = segment,
+                                              country = country,
+                                              city = city,
+                                              state = state,
+                                              postal_code = postal_code,
+                                              region = region)%>%
+                             arrange(desc(profit)))
+
+
+# Aplicación de filtros
+filter_select("dt","Year",data_top,group = ~year, multiple = FALSE)
+
+filter_select("ctr","Sub_category", data_top, group = ~sub_category, multiple = FALSE)
+
+
+## Mostrar las tablas
+data_top %>%
+  DT::datatable(rownames = FALSE, 
+                filter = "none",
+                colnames = c('Year','Subcategoria','Nombre del producto','Rendimiento'),
+                
+                options = list(dom = 't',
+                               columnDefs = list(list(targets = "year",visible = FALSE),
+                                                 list(targets = "sub_category", visible = FALSE),
+                                                 list(targets = "ventas", visible = FALSE),
+                                                 list(targets = "segmentos", visible = FALSE),
+                                                 list(targets = "costos", visible = FALSE),
+                                                 list(targets = "country", visible = FALSE),
+                                                 list(targets = "city", visible = FALSE),
+                                                 list(targets = "state", visible = FALSE),
+                                                 list(targets = "postal_code", visible = FALSE),
+                                                 list(targets = "region", visible = FALSE)),
+                               pageLength = 5,
+                               initComplete = JS("function(settings, json) {",
+                                                 "$(this.api().table().header()).css({'background-color': '#26580F', 'color': '#fff'});",
+                                                 "}")))%>%
+  formatPercentage('profit',digits = 2) %>%
+  formatStyle('profit', backgroundColor = '#F0FFF0', fontWeight = 'bold')%>%
+  formatStyle('product_name',  color = 'gray', fontWeight = 'bold')
+
 
 ```
 
-Column {data-width=350}
+
+Column {data-width=350, data-height}
 -----------------------------------------------------------------------
 
-### Chart B
+### Gráfico
+
+```{r}
+plot_ly(data_top,x=~segmentos)
+```
+
+
+# Segmentos
+
+Column {data-width=600}
+-----------------------------------------------------------------------
+
+### Rendimiento
 
 ```{r}
 
 ```
-
-### Chart C
-
-```{r}
-
-```
-

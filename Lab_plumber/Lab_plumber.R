@@ -31,7 +31,6 @@ if(length(req$args)!=0){
       write(x,file = paste0(folder,req$PATH_INFO,"-",as.integer(Sys.time()),".json"))
       
     } else {
-      browser()
       dir.create(folder,recursive = TRUE)
       
       x <- list('req'=req$args,
@@ -70,6 +69,7 @@ function(Pclass, Sex, Age, SibSp, Parch, Fare, Embarked){
                          Embarked)
   out <- predict(fit,features,type = "class")
   as.character(out)
+
 }
 
 
@@ -78,13 +78,13 @@ function(Pclass, Sex, Age, SibSp, Parch, Fare, Embarked){
 #EJEMPLO 1
 # Creamos un data frame
 users <- data.frame(
-  uid=c(12,13),
-  username=c("kim", "john")
+  uid=c("20200392","20200072","20200411","20200395","20200391"),
+  username=c("Luz Arevalo", "Ana Sanchez", "Marco Ocampo", "Carlos Umul","Wilder Villeda")
 )
 
 
 # La respuesta será el nombre del usuario con el `id` ingresado. 
-#* Lookup a user
+#* Buscamos un usuario
 #* @get /users/<id>
 function(id){
   subset(users, uid %in% id)
@@ -107,8 +107,6 @@ function(from, to,where){
       filter(date >= ymd(from) & date <= ymd(to) & location.name == where)%>%
       select(time.full,location.name,impact.magnitude)
 }
-
-
 
 
 
@@ -139,7 +137,7 @@ function(x,y){
 }
 
 #* Variables de tipo boolean
-#* @post /user/activated/<active:bool>
+#* @post /boolean/<active:bool>
 function(active){
   if (!active){
     print("No active")
