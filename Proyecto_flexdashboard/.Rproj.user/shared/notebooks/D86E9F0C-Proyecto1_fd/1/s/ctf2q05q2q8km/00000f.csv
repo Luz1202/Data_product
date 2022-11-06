@@ -1,6 +1,0 @@
-"0","# Use SharedData like a dataframe with Crosstalk-enabled widgets
-  datatable(sd, extensions=""Scroller"", style=""bootstrap"", class=""compact"", width=""100%"",
-    options=list(deferRender=TRUE, scrollY=300, scroller=TRUE))
-"
-"2","Error in dirname(to) : path too long
-"
