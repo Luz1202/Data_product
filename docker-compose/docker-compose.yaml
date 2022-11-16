@@ -1,0 +1,21 @@
+version: '3.7'
+services:
+
+  saturno:
+    image: obedaeg/jupyter-base-notebook-psycopg2
+    ports:
+      - 8888:8888
+
+  database:
+    image: postgres
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=test
+      - POSTGRES_DB=test
+      - POSTGRES_PASSWORD=test123
+  
+  shiny:
+    image: 2002l/shiny
+    ports:
+      - 3838:3838
