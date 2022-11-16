@@ -45,8 +45,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                                         selected = unique(athlete_events$Season)),
                                                      numericInput('year','Year',value = 2000, step = 2, min = min(athlete_events$Year), 
                                                                   max = max(athlete_events$Year)),
-                                                     selectInput('sport', 'Sport', choices = unique(athlete_events$Sport),selected = athlete_events$Sport[1]),
-                                                     submitButton(text = "Aply",icon = icon("fa-light fa-fire-flame-curved"), width = 100)
+                                                     selectInput('sport', 'Sport', choices = unique(athlete_events$Sport),selected = NULL)
                                         ),
                                         mainPanel(
                                           tabsetPanel(

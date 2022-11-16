@@ -5,7 +5,9 @@ library(dplyr)
 library(tidyverse)
 library(ggplot2)
 
+athlete_events <<- read.csv("athlete_events.csv")
 shinyServer(function(input, output, session) {
+  
   athlete_events <<- read.csv("athlete_events.csv")
   
   #### EVENTOS ####
